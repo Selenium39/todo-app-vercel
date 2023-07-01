@@ -1,0 +1,288 @@
+import { Box, Button, VStack, Icon, Input, Textarea, Text, HStack } from "@chakra-ui/react";
+import { FaCheckCircle, FaTrash } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+import dayjs from 'dayjs';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY || ''
+);
+
+interface Todo {
+  title: string;
+  description: string;
+  completed: boolean;
+  created_at: string;
+  completed_at: string | null;
+}
+
+interface Folder {
+  date: string;
+  todos: Todo[];
+  isOpen: boolean;
+}
+
+const IndexPage = () => {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [newTodo, setNewTodo] = useState<Todo>({
+    title: "",
+    description: "",
+    completed: false,
+    created_at: "",
+    completed_at: null
+  });
+
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("todos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const uncompletedTodos = data.filter(todo => !todo.completed);
+        const completedTodos = data.filter(todo => todo.completed);
+        const today = dayjs().format('YYYY-MM-DD');
+        const todayCompletedTodos = completedTodos.filter(todo => dayjs(todo.completed_at).format('YYYY-MM-DD') === today);
+        const otherCompletedTodos = completedTodos.filter(todo => dayjs(todo.completed_at).format('YYYY-MM-DD') !== today);
+
+        setTodos([...uncompletedTodos, ...todayCompletedTodos]);
+        setFolders(groupTodosByDate(otherCompletedTodos));
+      }
+    } catch (error:any) {
+      console.error("获取待办事项失败:", error.message);
+    }
+  };
+
+  const groupTodosByDate = (todos: Todo[], excludeToday: boolean = true): Folder[] => {
+    const groupedTodos: { [date: string]: Todo[] } = {};
+    todos.forEach((todo) => {
+      const date = dayjs(todo.completed_at);
+      if (date.isValid()) {
+        const formattedDate = date.format('YYYY-MM-DD');
+        if (!groupedTodos[formattedDate]) {
+          groupedTodos[formattedDate] = [];
+        }
+        groupedTodos[formattedDate].push(todo);
+      }
+    });
+
+    const folders: Folder[] = [];
+    for (const date in groupedTodos) {
+      if (excludeToday && date === dayjs().format('YYYY-MM-DD')) {
+        continue;
+      }
+      folders.push({
+        date,
+        todos: groupedTodos[date],
+        isOpen: false
+      });
+    }
+    folders.sort((a, b) => dayjs(b.date).diff(dayjs(a.date)));
+
+    return folders;
+  };
+
+  const addTodo = async () => {
+    if (newTodo.title.trim() !== "") {
+      try {
+        const createdAt = new Date().toISOString();
+        const { data, error } = await supabase
+          .from("todos")
+          .insert([{ ...newTodo, created_at: createdAt }]);
+        if (error) {
+          throw error;
+        }
+        await fetchTodos();
+        setNewTodo({
+          title: "",
+          description: "",
+          completed: false,
+          created_at: "",
+          completed_at: null
+        });
+      } catch (error:any) {
+        console.error("添加待办事项失败:", error.message);
+      }
+    }
+  };
+
+  const deleteTodo = async (id: number) => {
+    try {
+      const { error } = await supabase.from("todos").delete().eq("id", id);
+      if (error) {
+        console.log("error", error);
+      } else {
+        await fetchTodos();
+      }
+    } catch (error:any) {
+      console.error("删除待办事项失败:", error.message);
+    }
+  };
+
+  const completeTodo = async (id: number, folderDate?: string) => {
+    try {
+      let todo = todos.find((todo) => (todo as any).id === id);
+      if (!todo && folderDate) {
+        const folder = folders.find((folder) => folder.date === folderDate);
+        if (folder) {
+          todo = folder.todos.find((todo) => (todo as any).id === id);
+        }
+      }
+      if (todo) {
+        const completedAt = todo.completed ? null : new Date().toISOString();
+        const { error } = await supabase
+          .from("todos")
+          .update({ completed: !todo.completed, completed_at: completedAt })
+          .eq("id", id);
+
+        if (error) {
+          throw error;
+        }
+
+        await fetchTodos(); // Fetch updated todos from the backend
+      }
+    } catch (error:any) {
+      console.error("完成待办事项失败:", error.message);
+    }
+  };
+  return (
+    <Box p={4}>
+      <VStack spacing={4} align="stretch">
+        <Input
+          type="text"
+          placeholder="标题"
+          value={newTodo.title}
+          onChange={(e) =>
+            setNewTodo({
+              ...newTodo,
+              title: e.target.value
+            })
+          }
+        />
+        <Textarea
+          placeholder="描述"
+          value={newTodo.description}
+          onChange={(e) =>
+            setNewTodo({
+              ...newTodo,
+              description: e.target.value
+            })
+          }
+        />
+        <Button colorScheme="blue" onClick={addTodo}>
+          添加待办事项
+        </Button>
+        {todos.map((todo) => (
+          <Box
+            key={(todo as any).id}
+            borderWidth="1px"
+            p={4}
+            bg={todo.completed ? "gray.200" : "white"}
+            borderRadius="md"
+            boxShadow="md"
+            position="relative"
+          >
+            {/* Rest of the code */}
+            {todo.completed && (
+                      <Box position="absolute" top={2} right={2}>
+                        <Icon onClick={() => completeTodo((todo as any).id)} as={FaCheckCircle} color="green.500" boxSize={6} />
+                      </Box>
+                    )}
+            <Text fontWeight="bold">{todo.title}</Text>
+            <Text>{todo.description}</Text>
+            <Text fontSize="sm" color="gray.500" mt={2}>
+              创建时间: {dayjs(todo.created_at).format('YYYY-MM-DD HH:mm:ss')}
+            </Text>
+            {todo.completed && (
+              <Text fontSize="sm" color="gray.500">
+                完成时间: {dayjs(todo.completed_at).format('YYYY-MM-DD HH:mm:ss')}
+              </Text>
+            )}
+            {!todo.completed && (
+              <HStack spacing={2} mt={2}>
+                <Button
+                  colorScheme="green"
+                  size="sm"
+                  onClick={() => completeTodo((todo as any).id)}
+                  leftIcon={<Icon as={FaCheckCircle} color="white" />}
+                >
+                  完成
+                </Button>
+                <Button
+                  colorScheme="red"
+                  size="sm"
+                  onClick={() => deleteTodo((todo as any).id)}
+                  leftIcon={<Icon as={FaTrash} color="white" />}
+                >
+                  删除
+                </Button>
+              </HStack>
+            )}
+          </Box>
+        ))}
+        {folders.map((folder) => (
+          <Box key={folder.date}>
+            <Button
+              variant="link"
+              color="blue.500"
+              onClick={() => {
+                const updatedFolders = [...folders];
+                const folderIndex = updatedFolders.findIndex(
+                  (f) => f.date === folder.date
+                );
+                updatedFolders[folderIndex].isOpen = !updatedFolders[
+                  folderIndex
+                ].isOpen;
+                setFolders(updatedFolders);
+              }}
+            >
+              {folder.date}
+            </Button>
+            {folder.isOpen && (
+              <VStack spacing={2} align="stretch">
+                {folder.todos.map((todo) => (
+                  <Box
+                    key={(todo as any).id}
+                    borderWidth="1px"
+                    p={4}
+                    bg={todo.completed ? "gray.200" : "white"}
+                    position="relative"
+                  >
+                    {todo.completed && (
+                      <Box position="absolute" top={2} right={2}>
+                        <Icon onClick={() => completeTodo((todo as any).id, folder.date)} as={FaCheckCircle} color="green.500" boxSize={6} />
+                      </Box>
+                    )}
+                    <strong>{todo.title}</strong>
+                    <p>{todo.description}</p>
+                    <Text>
+                      创建时间: {dayjs(todo.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                    </Text>
+                    {todo.completed && (
+                      <Text>
+                        完成时间: {dayjs(todo.completed_at).format('YYYY-MM-DD HH:mm:ss')}
+                      </Text>
+                    )}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </Box>
+        ))}
+      </VStack>
+    </Box>
+  );
+};
+
+export default IndexPage;
