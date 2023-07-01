@@ -38,6 +38,18 @@ const IndexPage = () => {
     fetchTodos();
   }, []);
 
+  const checkCode = () => {
+    const expectedCode = process.env.NEXT_PUBLIC_CODE;
+    const storedCode = localStorage.getItem("TODO-CODE");
+    if (!storedCode || storedCode !== expectedCode) {
+      const enteredCode = prompt("请输入CODE:");
+      if (enteredCode !== expectedCode) {
+        throw new Error("CODE不正确");
+      }
+      localStorage.setItem("TODO-CODE", enteredCode);
+    }
+  };
+
   const fetchTodos = async () => {
     try {
       const { data, error } = await supabase
@@ -50,11 +62,11 @@ const IndexPage = () => {
       }
 
       if (data) {
-        const uncompletedTodos = data.filter(todo => !todo.completed);
-        const completedTodos = data.filter(todo => todo.completed);
+        const uncompletedTodos = data.filter((todo: Todo) => !todo.completed);
+        const completedTodos = data.filter((todo: Todo) => todo.completed);
         const today = dayjs().format('YYYY-MM-DD');
-        const todayCompletedTodos = completedTodos.filter(todo => dayjs(todo.completed_at).format('YYYY-MM-DD') === today);
-        const otherCompletedTodos = completedTodos.filter(todo => dayjs(todo.completed_at).format('YYYY-MM-DD') !== today);
+        const todayCompletedTodos = completedTodos.filter((todo: Todo) => dayjs(todo.completed_at).format('YYYY-MM-DD') === today);
+        const otherCompletedTodos = completedTodos.filter((todo: Todo) => dayjs(todo.completed_at).format('YYYY-MM-DD') !== today);
 
         setTodos([...uncompletedTodos, ...todayCompletedTodos]);
         setFolders(groupTodosByDate(otherCompletedTodos));
@@ -66,7 +78,7 @@ const IndexPage = () => {
 
   const groupTodosByDate = (todos: Todo[], excludeToday: boolean = true): Folder[] => {
     const groupedTodos: { [date: string]: Todo[] } = {};
-    todos.forEach((todo) => {
+    todos.forEach((todo: Todo) => {
       const date = dayjs(todo.completed_at);
       if (date.isValid()) {
         const formattedDate = date.format('YYYY-MM-DD');
@@ -96,6 +108,7 @@ const IndexPage = () => {
   const addTodo = async () => {
     if (newTodo.title.trim() !== "") {
       try {
+        checkCode();
         const createdAt = new Date().toISOString();
         const { data, error } = await supabase
           .from("todos")
@@ -119,6 +132,7 @@ const IndexPage = () => {
 
   const deleteTodo = async (id: number) => {
     try {
+      checkCode();
       const { error } = await supabase.from("todos").delete().eq("id", id);
       if (error) {
         console.log("error", error);
@@ -132,11 +146,12 @@ const IndexPage = () => {
 
   const completeTodo = async (id: number, folderDate?: string) => {
     try {
-      let todo = todos.find((todo) => (todo as any).id === id);
+      checkCode();
+      let todo = todos.find((todo) => todo.id === id);
       if (!todo && folderDate) {
         const folder = folders.find((folder) => folder.date === folderDate);
         if (folder) {
-          todo = folder.todos.find((todo) => (todo as any).id === id);
+          todo = folder.todos.find((todo) => todo.id === id);
         }
       }
       if (todo) {
@@ -156,6 +171,7 @@ const IndexPage = () => {
       console.error("完成待办事项失败:", error.message);
     }
   };
+
   return (
     <Box p={4}>
       <VStack spacing={4} align="stretch">
@@ -185,7 +201,7 @@ const IndexPage = () => {
         </Button>
         {todos.map((todo) => (
           <Box
-            key={(todo as any).id}
+            key={todo.id}
             borderWidth="1px"
             p={4}
             bg={todo.completed ? "gray.200" : "white"}
@@ -195,10 +211,15 @@ const IndexPage = () => {
           >
             {/* Rest of the code */}
             {todo.completed && (
-                      <Box position="absolute" top={2} right={2}>
-                        <Icon onClick={() => completeTodo((todo as any).id)} as={FaCheckCircle} color="green.500" boxSize={6} />
-                      </Box>
-                    )}
+              <Box position="absolute" top={2} right={2}>
+                <Icon
+                  onClick={() => completeTodo(todo.id)}
+                  as={FaCheckCircle}
+                  color="green.500"
+                  boxSize={6}
+                />
+              </Box>
+            )}
             <Text fontWeight="bold">{todo.title}</Text>
             <Text>{todo.description}</Text>
             <Text fontSize="sm" color="gray.500" mt={2}>
@@ -214,7 +235,7 @@ const IndexPage = () => {
                 <Button
                   colorScheme="green"
                   size="sm"
-                  onClick={() => completeTodo((todo as any).id)}
+                  onClick={() => completeTodo(todo.id)}
                   leftIcon={<Icon as={FaCheckCircle} color="white" />}
                 >
                   完成
@@ -222,7 +243,7 @@ const IndexPage = () => {
                 <Button
                   colorScheme="red"
                   size="sm"
-                  onClick={() => deleteTodo((todo as any).id)}
+                  onClick={() => deleteTodo(todo.id)}
                   leftIcon={<Icon as={FaTrash} color="white" />}
                 >
                   删除
@@ -253,7 +274,7 @@ const IndexPage = () => {
               <VStack spacing={2} align="stretch">
                 {folder.todos.map((todo) => (
                   <Box
-                    key={(todo as any).id}
+                    key={todo.id}
                     borderWidth="1px"
                     p={4}
                     bg={todo.completed ? "gray.200" : "white"}
@@ -261,7 +282,12 @@ const IndexPage = () => {
                   >
                     {todo.completed && (
                       <Box position="absolute" top={2} right={2}>
-                        <Icon onClick={() => completeTodo((todo as any).id, folder.date)} as={FaCheckCircle} color="green.500" boxSize={6} />
+                        <Icon
+                          onClick={() => completeTodo(todo.id, folder.date)}
+                          as={FaCheckCircle}
+                          color="green.500"
+                          boxSize={6}
+                        />
                       </Box>
                     )}
                     <strong>{todo.title}</strong>
