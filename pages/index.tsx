@@ -214,7 +214,7 @@ const IndexPage = () => {
             {todo.completed && (
               <Box position="absolute" top={2} right={2}>
                 <Icon
-                  onClick={() => completeTodo(todo.id)}
+                  onClick={() => completeTodo((todo as any).id)}
                   as={FaCheckCircle}
                   color="green.500"
                   boxSize={6}
@@ -236,7 +236,7 @@ const IndexPage = () => {
                 <Button
                   colorScheme="green"
                   size="sm"
-                  onClick={() => completeTodo(todo.id)}
+                  onClick={() => completeTodo((todo as any).id)}
                   leftIcon={<Icon as={FaCheckCircle} color="white" />}
                 >
                   完成
@@ -244,7 +244,7 @@ const IndexPage = () => {
                 <Button
                   colorScheme="red"
                   size="sm"
-                  onClick={() => deleteTodo(todo.id)}
+                  onClick={() => deleteTodo((todo as any).id)}
                   leftIcon={<Icon as={FaTrash} color="white" />}
                 >
                   删除
@@ -284,7 +284,7 @@ const IndexPage = () => {
                     {todo.completed && (
                       <Box position="absolute" top={2} right={2}>
                         <Icon
-                          onClick={() => completeTodo(todo.id, folder.date)}
+                          onClick={() => completeTodo((todo as any).id, folder.date)}
                           as={FaCheckCircle}
                           color="green.500"
                           boxSize={6}
