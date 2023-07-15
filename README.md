@@ -1,38 +1,28 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## Getting Started
+# 待办事项应用
 
-First, run the development server:
+这是一个使用 Next.js 和 Supabase 构建的简单待办事项应用。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+## 功能
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 新增待办事项  
+- 标记待办事项为已完成
+- 删除待办事项
+- 按天分组归档已完成的待办事项
+- Supabase 后端储存数据
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## 使用技术
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- Next.js - React 框架
+- Chakra UI - UI 组件库
+- Supabase - 后端数据库
+- Day.js - 处理时间显示
+- React Markdown - 渲染 Markdown 语法
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+## 说明
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+此仓库中的所有代码完全由 ChatGPT 3.5 生成。
 
-## Learn More
+## 许可证
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+这个项目使用 MIT 许可证
