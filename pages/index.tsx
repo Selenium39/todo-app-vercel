@@ -3,6 +3,7 @@ import { FaCheckCircle, FaTrash } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import dayjs from 'dayjs';
+import ReactMarkdown from 'react-markdown';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -222,7 +223,7 @@ const IndexPage = () => {
               </Box>
             )}
             <Text fontWeight="bold">{todo.title}</Text>
-            <Text>{todo.description}</Text>
+            <ReactMarkdown>{todo.description}</ReactMarkdown>
             <Text fontSize="sm" color="gray.500" mt={2}>
               创建时间: {dayjs(todo.created_at).format('YYYY-MM-DD HH:mm:ss')}
             </Text>
@@ -292,7 +293,7 @@ const IndexPage = () => {
                       </Box>
                     )}
                     <strong>{todo.title}</strong>
-                    <p>{todo.description}</p>
+                    <ReactMarkdown>{todo.description}</ReactMarkdown>
                     <Text>
                       创建时间: {dayjs(todo.created_at).format('YYYY-MM-DD HH:mm:ss')}
                     </Text>
