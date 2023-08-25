@@ -1,5 +1,6 @@
-import { Box, Button, VStack, Icon, Input, Textarea, Text, HStack } from "@chakra-ui/react";
-import { FaCheckCircle, FaTrash } from "react-icons/fa";
+import { Box, Button, VStack, Icon, Input, Textarea, Text, HStack, Tooltip, IconButton } from "@chakra-ui/react";
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton } from "@chakra-ui/react";
+import { FaCheckCircle, FaTrash, FaRegClipboard } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import dayjs from 'dayjs';
@@ -7,7 +8,12 @@ import ReactMarkdown from 'react-markdown';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY || ''
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_KEY || '',
+  {
+    auth:{
+      persistSession: true
+    }
+  }
 );
 
 interface Todo {
@@ -35,6 +41,9 @@ const IndexPage = () => {
     created_at: "",
     completed_at: null
   });
+  const [reportData, setReportData] = useState<string>('');
+  const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+
 
   useEffect(() => {
     fetchTodos();
@@ -73,7 +82,7 @@ const IndexPage = () => {
         setTodos([...uncompletedTodos, ...todayCompletedTodos]);
         setFolders(groupTodosByDate(otherCompletedTodos));
       }
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("获取待办事项失败:", error.message);
     }
   };
@@ -126,7 +135,7 @@ const IndexPage = () => {
           created_at: "",
           completed_at: null
         });
-      } catch (error:any) {
+      } catch (error: any) {
         console.error("添加待办事项失败:", error.message);
       }
     }
@@ -141,7 +150,7 @@ const IndexPage = () => {
       } else {
         await fetchTodos();
       }
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("删除待办事项失败:", error.message);
     }
   };
@@ -169,10 +178,62 @@ const IndexPage = () => {
 
         await fetchTodos(); // Fetch updated todos from the backend
       }
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("完成待办事项失败:", error.message);
     }
   };
+
+  const generateWeeklyReport = async () => {
+    try {
+      const oneWeekAgo = dayjs().subtract(5, 'day');
+
+      const pastWeekCompletedTodos = todos.filter(todo =>
+        todo.completed && dayjs(todo.completed_at).isAfter(oneWeekAgo)
+      );
+
+      const unfinishedTodos = todos.filter(todo => !todo.completed);
+
+      const formatData = (todos: Todo[]) => {
+        return todos.map(todo => `${todo.title}:${todo.description}`).join('\n');
+      };
+
+      const finishDatas = formatData(pastWeekCompletedTodos);
+      const todoDatas = formatData(unfinishedTodos);
+
+      // server send events
+      const finishDataString = encodeURIComponent(finishDatas); // 格式化并编码数据
+      const todoDataString = encodeURIComponent(todoDatas);
+
+      // 使用查询参数传递数据
+      const sseUrl = `/api/proxy?finishDatas=${finishDataString}&todoDatas=${todoDataString}&query=生成周报&user=Selenium39&response_mode=streaming`;
+
+      const eventSource = new EventSource(sseUrl);
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data && data.answer) {
+          if (!isReportModalOpen) {
+            setIsReportModalOpen(true);
+          }
+          setReportData(prevReport => prevReport + data.answer);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("SSE failed:", error);
+        eventSource.close();
+      };
+    } catch (error: any) {
+      console.error("生成周报失败:", error.message);
+    }
+  };
+
+  const closeReportModal = () => {
+    setIsReportModalOpen(false);
+    setReportData('');
+  };
+
+
 
   return (
     <Box p={4}>
@@ -201,6 +262,18 @@ const IndexPage = () => {
         <Button colorScheme="blue" onClick={addTodo}>
           添加待办事项
         </Button>
+
+        {/* 工具栏 */}
+        <HStack spacing={4} mt={4} justifyContent="flex-end">
+          <Tooltip label="生成周报" placement="top">
+            <IconButton
+              aria-label="生成周报"
+              icon={<FaRegClipboard />}
+              colorScheme="teal"
+              onClick={generateWeeklyReport}
+            />
+          </Tooltip>
+        </HStack>
         {todos.map((todo) => (
           <Box
             key={todo.id}
@@ -308,6 +381,19 @@ const IndexPage = () => {
             )}
           </Box>
         ))}
+        {/* 周报模态框 */}
+        {isReportModalOpen && (
+          <Modal isOpen={isReportModalOpen} onClose={closeReportModal}>
+            <ModalOverlay />
+            <ModalContent maxWidth="80%" height="70vh">
+              <ModalHeader>周报</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody overflowY="auto" maxHeight="600px">
+                <pre>{reportData}</pre>
+              </ModalBody>
+            </ModalContent>
+          </Modal>
+        )}
       </VStack>
     </Box>
   );
