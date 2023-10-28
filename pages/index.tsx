@@ -264,7 +264,7 @@ const IndexPage = () => {
         </Button>
 
         {/* 工具栏 */}
-        <HStack spacing={4} mt={4} justifyContent="flex-end">
+        {/* <HStack spacing={4} mt={4} justifyContent="flex-end">
           <Tooltip label="生成周报" placement="top">
             <IconButton
               aria-label="生成周报"
@@ -273,7 +273,7 @@ const IndexPage = () => {
               onClick={generateWeeklyReport}
             />
           </Tooltip>
-        </HStack>
+        </HStack> */}
         {todos.map((todo) => (
           <Box
             key={todo.id}
